@@ -1,8 +1,8 @@
 import { defineConfig } from "vitest/config";
-
+const env = process.env.BROWSER ? "jsdom" : "node";
 export default defineConfig({
   test: {
-    environment: "node",
+    environment: env,
     dir: ".",
     watch: false,
     testTimeout: 5000,

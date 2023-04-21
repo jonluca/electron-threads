@@ -6,15 +6,13 @@
   "main": "dist/index.js",
   "scripts": {
     "clean": "rimraf dist",
-    "dev": "npm run clean && esbuild src/index.ts --outfile=dist/index.js --target=chrome109 --sourcemap --watch ",
+    "dev": "npm run clean && tsc -p tsconfig.json --watch",
     "build": "npm run clean && tsc -p tsconfig.json",
     "postbuild": "npm run bundle",
-    "bundle": "esbuild dist/worker/bundle-entry.js --outfile=bundle/worker.js --bundle --target=chrome109",
-    "test": "npm run test:library && npm run test:tooling && npm run test:puppeteer:basic && npm run test:puppeteer:webpack",
+    "bundle": "esbuild dist/worker/bundle-entry.js --outfile=bundle/worker.js --bundle --packages=external --target=chrome109",
+    "test": "npm run test:library && npm run test:puppeteer:basic",
     "test:library": "cross-env TS_NODE_FILES=true vitest",
-    "test:tooling": "cross-env TS_NODE_FILES=true ava ./test-tooling/**/*.test.ts",
-    "test:puppeteer:basic": "puppet-run --plugin=mocha --bundle=./test/workers/:workers/ --serve=./bundle/worker.js:/worker.js ./test/*.chromium*.ts",
-    "test:puppeteer:webpack": "puppet-run --serve ./test-tooling/webpack/dist/app.web/0.worker.js --serve ./test-tooling/webpack/dist/app.web/1.worker.js --plugin=mocha ./test-tooling/webpack/webpack.chromium.mocha.ts",
+    "test:puppeteer:basic": "BROWSER=true vitest",
     "prepare": "npm run build"
   },
   "exports": {
@@ -77,6 +75,7 @@
     "cross-env": "^7.0.3",
     "esbuild": "^0.17.17",
     "execa": "^7.1.1",
+    "jsdom": "^21.1.1",
     "mocha": "^10.2.0",
     "puppet-run": "^0.11.4",
     "puppet-run-plugin-mocha": "^0.10.0-alpha",

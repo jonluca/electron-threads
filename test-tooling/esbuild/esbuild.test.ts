@@ -10,6 +10,7 @@ test("can be bundled using rollup", async (t) => {
     format: "iife",
     write: true,
     outdir: path.resolve(__dirname, "dist"),
+    // packages: "external",
   } as const;
   await build({
     ...sharedOpts,
@@ -28,8 +29,8 @@ test("can be bundled using rollup", async (t) => {
 
   const result = await execa("puppet-run --serve ./dist/worker.js:/worker.js ./dist/app.js", {
     cwd: __dirname,
-    stdio: "ignore",
     shell: true,
+    stdio: "pipe",
   });
   expect(result.exitCode).toEqual(0);
 });
