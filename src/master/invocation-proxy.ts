@@ -20,6 +20,7 @@ import {
   WorkerJobStartMessage,
   WorkerMessageType,
 } from "../types/messages";
+import { SubscriptionObserver } from "observable-fns/dist/observable";
 
 const debugMessages = DebugLogger("threads:master:messages");
 
@@ -33,7 +34,7 @@ const isJobResultMessage = (data: any): data is WorkerJobResultMessage =>
 const isJobStartMessage = (data: any): data is WorkerJobStartMessage => data && data.type === WorkerMessageType.running;
 
 function createObservableForJob<ResultType>(worker: WorkerType, jobUID: number): Observable<ResultType> {
-  return new Observable((observer) => {
+  return new Observable((observer: SubscriptionObserver<any>) => {
     let asyncType: "observable" | "promise" | undefined;
 
     const messageHandler = ((event: MessageEvent) => {
