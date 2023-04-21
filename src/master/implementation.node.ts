@@ -72,7 +72,6 @@ function rebaseScriptPath(scriptPath: string, ignoreRegex: RegExp) {
 
 function resolveScriptPath(scriptPath: string, baseURL?: string | undefined) {
   const makeRelative = (filePath: string) => {
-    // eval() hack is also webpack-related
     return path.isAbsolute(filePath) ? filePath : path.join(baseURL || eval("__dirname"), filePath);
   };
 

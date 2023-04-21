@@ -1,7 +1,3 @@
-// Webpack hack
-
-declare function __non_webpack_require__(module: string): any;
-
 // FIXME
 type MessagePort = any;
 
@@ -14,9 +10,7 @@ interface WorkerThreadsModule {
 let implementation: WorkerThreadsModule | undefined;
 
 function selectImplementation(): WorkerThreadsModule {
-  return typeof __non_webpack_require__ === "function"
-    ? __non_webpack_require__("worker_threads")
-    : eval("require")("worker_threads");
+  return eval("require")("worker_threads");
 }
 
 export default function getImplementation(): WorkerThreadsModule {
