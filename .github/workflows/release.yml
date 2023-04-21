@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     permissions:
-      contents: read
+      contents: write
       id-token: write
     name: Release
     runs-on: ubuntu-latest
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: latest
       - run: yarn install --frozen-lockfile
       - run: yarn build
       - run: yarn test
