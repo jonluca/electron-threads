@@ -59,9 +59,7 @@
     "worker_threads"
   ],
   "dependencies": {
-    "callsites": "^4.0.0",
     "debug": "^4.3.4",
-    "is-observable": "^3.0.0",
     "observable-fns": "^0.6.1"
   },
   "devDependencies": {
