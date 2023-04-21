@@ -86,7 +86,7 @@ function initWorkerThreadsWorker(): ImplementationExport {
   class Worker extends NativeWorker {
     private mappedEventListeners: WeakMap<EventListener, EventListener>;
 
-    constructor(scriptPath: string, options?: ThreadsWorkerOptions & { fromSource: boolean; asar?: boolean }) {
+    constructor(scriptPath: string, options?: ThreadsWorkerOptions & { fromSource: boolean }) {
       const resolvedScriptPath =
         options && options.fromSource ? null : resolveScriptPath(scriptPath, (options || {})._baseURL);
 

@@ -91,6 +91,9 @@ export interface ThreadsWorkerOptions extends WorkerOptions {
 
   /** Whether to apply CORS protection workaround. Defaults to true. */
   CORSWorkaround?: boolean;
+
+  /** Whether the worker is packed in an asar. Defaults to false. */
+  asar?: boolean;
 }
 
 /** Worker implementation. Either web worker or a node.js Worker class. */
