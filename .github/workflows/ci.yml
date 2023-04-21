@@ -14,20 +14,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node_version: ['15']
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        node_version: "latest"
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
 
       - name: install dependencies and build
-        run: npm install
+        run: yarn install
 
       - name: Dev test
-        run: npm run test:tooling
+        run: yarn test
 
       - name: Upload artifacts
         if: contains(matrix.os, 'ubuntu')
@@ -36,7 +36,6 @@ jobs:
           path: |
             ./bundle
             ./dist
-            ./dist-esm
             ./test-tooling/webpack/dist
 
   # Testing the built files
@@ -47,17 +46,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node_version: [ '10', '12', '14' ]
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        node_version: "latest"
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
 
       - name: install dependencies
-        run: npm install --ignore-scripts
+        run: yarn install --ignore-scripts
 
       - name: Download articats
         uses: actions/download-artifact@v2
@@ -66,12 +65,10 @@ jobs:
         shell: bash
         run: |
           mkdir dist && mv artifact/dist/* ./dist
-          mkdir dist-esm && mv artifact/dist-esm/* ./dist-esm
           mkdir bundle && mv artifact/bundle/* ./bundle
-          mkdir -p test-tooling/webpack/dist/ && mv artifact/test-tooling/webpack/dist/* ./test-tooling/webpack/dist/
 
       - name: run the tests
-        run: npm run test:library && npm run test:puppeteer:basic && npm run test:puppeteer:webpack
+        run: yarn test
 
   Skip:
     if: contains(github.event.head_commit.message, '[skip ci]')
