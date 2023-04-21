@@ -1,9 +1,9 @@
-import { Worker as WorkerImplementation } from "./index"
+import { Worker as WorkerImplementation } from "./index";
 
-declare const window: any
+declare const window: any;
 
 if (typeof global !== "undefined") {
-  (global as any).Worker = WorkerImplementation
+  (global as any).Worker = WorkerImplementation;
 } else if (typeof window !== "undefined") {
-  (window as any).Worker = WorkerImplementation
+  (window as any).Worker = WorkerImplementation;
 }

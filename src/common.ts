@@ -3,19 +3,19 @@ import {
   DefaultSerializer,
   JsonSerializable,
   Serializer,
-  SerializerImplementation
-} from "./serializers"
+  SerializerImplementation,
+} from "./serializers";
 
-let registeredSerializer: Serializer<JsonSerializable> = DefaultSerializer
+let registeredSerializer: Serializer<JsonSerializable> = DefaultSerializer;
 
 export function registerSerializer(serializer: SerializerImplementation<JsonSerializable>) {
-  registeredSerializer = extendSerializer(registeredSerializer, serializer)
+  registeredSerializer = extendSerializer(registeredSerializer, serializer);
 }
 
 export function deserialize(message: JsonSerializable): any {
-  return registeredSerializer.deserialize(message)
+  return registeredSerializer.deserialize(message);
 }
 
 export function serialize(input: any): JsonSerializable {
-  return registeredSerializer.serialize(input)
+  return registeredSerializer.serialize(input);
 }

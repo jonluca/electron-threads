@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`catches top-level thread errors 1`] = `"Top-level worker error"`;
+
+exports[`thread job errors are handled 1`] = `"I am supposed to fail."`;
+
+exports[`thread transfer errors are handled 1`] = `
+"() => {
+    } could not be cloned."
+`;

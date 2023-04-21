@@ -1,57 +1,49 @@
-import DebugLogger from "debug"
-import { multicast, Observable, Subject } from "observable-fns"
-import { allSettled } from "../ponyfills"
-import { defaultPoolSize } from "./implementation"
-import {
-  PoolEvent,
-  PoolEventType,
-  QueuedTask,
-  TaskRunFunction,
-  WorkerDescriptor
-} from "./pool-types"
-import { Thread } from "./thread"
+import DebugLogger from "debug";
+import { multicast, Observable, Subject } from "observable-fns";
+import { defaultPoolSize } from "./implementation";
+import { PoolEvent, PoolEventType, QueuedTask, TaskRunFunction, WorkerDescriptor } from "./pool-types";
+import { Thread } from "./thread";
 
-export { PoolEvent, PoolEventType, QueuedTask, Thread }
+export { PoolEvent, PoolEventType, QueuedTask, Thread };
 
 // tslint:disable-next-line no-namespace
 export declare namespace Pool {
-  type Event<ThreadType extends Thread = any> = PoolEvent<ThreadType>
-  type EventType = PoolEventType
+  type Event<ThreadType extends Thread = any> = PoolEvent<ThreadType>;
+  type EventType = PoolEventType;
 }
 
-let nextPoolID = 1
+let nextPoolID = 1;
 
 function createArray(size: number): number[] {
-  const array: number[] = []
+  const array: number[] = [];
   for (let index = 0; index < size; index++) {
-    array.push(index)
+    array.push(index);
   }
-  return array
+  return array;
 }
 
 function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function flatMap<In, Out>(array: In[], mapper: ((element: In) => Out[])): Out[] {
-  return array.reduce<Out[]>(
-    (flattened, element) => [...flattened, ...mapper(element)],
-    []
-  )
+function flatMap<In, Out>(array: In[], mapper: (element: In) => Out[]): Out[] {
+  return array.reduce<Out[]>((flattened, element) => [...flattened, ...mapper(element)], []);
 }
 
 function slugify(text: string) {
-  return text.replace(/\W/g, " ").trim().replace(/\s+/g, "-")
+  return text.replace(/\W/g, " ").trim().replace(/\s+/g, "-");
 }
 
 function spawnWorkers<ThreadType extends Thread>(
   spawnWorker: () => Promise<ThreadType>,
-  count: number
+  count: number,
 ): Array<WorkerDescriptor<ThreadType>> {
-  return createArray(count).map((): WorkerDescriptor<ThreadType> => ({
-    init: spawnWorker(),
-    runningTasks: []
-  }))
+  return createArray(count).map(
+    (): WorkerDescriptor<ThreadType> => ({
+      init: spawnWorker(),
+      runningTasks: [],
+    }),
+  );
 }
 
 /**
@@ -66,7 +58,7 @@ export interface Pool<ThreadType extends Thread> {
    *
    * @param allowResolvingImmediately Set to `true` to resolve immediately if task queue is currently empty.
    */
-  completed(allowResolvingImmediately?: boolean): Promise<any>
+  completed(allowResolvingImmediately?: boolean): Promise<any>;
 
   /**
    * Returns a promise that resolves once the task queue is emptied.
@@ -74,12 +66,12 @@ export interface Pool<ThreadType extends Thread> {
    *
    * @param allowResolvingImmediately Set to `true` to resolve immediately if task queue is currently empty.
    */
-  settled(allowResolvingImmediately?: boolean): Promise<Error[]>
+  settled(allowResolvingImmediately?: boolean): Promise<Error[]>;
 
   /**
    * Returns an observable that yields pool events.
    */
-  events(): Observable<PoolEvent<ThreadType>>
+  events(): Observable<PoolEvent<ThreadType>>;
 
   /**
    * Queue a task and return a promise that resolves once the task has been dequeued,
@@ -87,301 +79,291 @@ export interface Pool<ThreadType extends Thread> {
    *
    * @param task An async function that takes a thread instance and invokes it.
    */
-  queue<Return>(task: TaskRunFunction<ThreadType, Return>): QueuedTask<ThreadType, Return>
+  queue<Return>(task: TaskRunFunction<ThreadType, Return>): QueuedTask<ThreadType, Return>;
 
   /**
    * Terminate all pool threads.
    *
    * @param force Set to `true` to kill the thread even if it cannot be stopped gracefully.
    */
-  terminate(force?: boolean): Promise<void>
+  terminate(force?: boolean): Promise<void>;
 }
 
 export interface PoolOptions {
   /** Maximum no. of tasks to run on one worker thread at a time. Defaults to one. */
-  concurrency?: number
+  concurrency?: number;
 
   /** Maximum no. of jobs to be queued for execution before throwing an error. */
-  maxQueuedJobs?: number
+  maxQueuedJobs?: number;
 
   /** Gives that pool a name to be used for debug logging, letting you distinguish between log output of different pools. */
-  name?: string
+  name?: string;
 
   /** No. of worker threads to spawn and to be managed by the pool. */
-  size?: number
+  size?: number;
 }
 
 class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
-  public static EventType = PoolEventType
+  public static EventType = PoolEventType;
 
-  private readonly debug: DebugLogger.Debugger
-  private readonly eventObservable: Observable<PoolEvent<ThreadType>>
-  private readonly options: PoolOptions
-  private readonly workers: Array<WorkerDescriptor<ThreadType>>
+  private readonly debug: DebugLogger.Debugger;
+  private readonly eventObservable: Observable<PoolEvent<ThreadType>>;
+  private readonly options: PoolOptions;
+  private readonly workers: Array<WorkerDescriptor<ThreadType>>;
 
-  private readonly eventSubject = new Subject<PoolEvent<ThreadType>>()
-  private initErrors: Error[] = []
-  private isClosing = false
-  private nextTaskID = 1
-  private taskQueue: Array<QueuedTask<ThreadType, any>> = []
+  private readonly eventSubject = new Subject<PoolEvent<ThreadType>>();
+  private initErrors: Error[] = [];
+  private isClosing = false;
+  private nextTaskID = 1;
+  private taskQueue: Array<QueuedTask<ThreadType, any>> = [];
 
-  constructor(
-    spawnWorker: () => Promise<ThreadType>,
-    optionsOrSize?: number | PoolOptions
-  ) {
-    const options: PoolOptions = typeof optionsOrSize === "number"
-      ? { size: optionsOrSize }
-      : optionsOrSize || {}
+  constructor(spawnWorker: () => Promise<ThreadType>, optionsOrSize?: number | PoolOptions) {
+    const options: PoolOptions = typeof optionsOrSize === "number" ? { size: optionsOrSize } : optionsOrSize || {};
 
-    const { size = defaultPoolSize } = options
+    const { size = defaultPoolSize } = options;
 
-    this.debug = DebugLogger(`threads:pool:${slugify(options.name || String(nextPoolID++))}`)
-    this.options = options
-    this.workers = spawnWorkers(spawnWorker, size)
+    this.debug = DebugLogger(`threads:pool:${slugify(options.name || String(nextPoolID++))}`);
+    this.options = options;
+    this.workers = spawnWorkers(spawnWorker, size);
 
-    this.eventObservable = multicast(Observable.from(this.eventSubject))
+    this.eventObservable = multicast(Observable.from(this.eventSubject));
 
-    Promise.all(this.workers.map(worker => worker.init)).then(
-      () => this.eventSubject.next({
-        type: PoolEventType.initialized,
-        size: this.workers.length
-      }),
-      error => {
-        this.debug("Error while initializing pool worker:", error)
-        this.eventSubject.error(error)
-        this.initErrors.push(error)
-      }
-    )
+    Promise.all(this.workers.map((worker) => worker.init)).then(
+      () =>
+        this.eventSubject.next({
+          type: PoolEventType.initialized,
+          size: this.workers.length,
+        }),
+      (error) => {
+        this.debug("Error while initializing pool worker:", error);
+        this.eventSubject.error(error);
+        this.initErrors.push(error);
+      },
+    );
   }
 
   private findIdlingWorker(): WorkerDescriptor<ThreadType> | undefined {
-    const { concurrency = 1 } = this.options
-    return this.workers.find(worker => worker.runningTasks.length < concurrency)
+    const { concurrency = 1 } = this.options;
+    return this.workers.find((worker) => worker.runningTasks.length < concurrency);
   }
 
   private async runPoolTask(worker: WorkerDescriptor<ThreadType>, task: QueuedTask<ThreadType, any>) {
-    const workerID = this.workers.indexOf(worker) + 1
+    const workerID = this.workers.indexOf(worker) + 1;
 
-    this.debug(`Running task #${task.id} on worker #${workerID}...`)
+    this.debug(`Running task #${task.id} on worker #${workerID}...`);
     this.eventSubject.next({
       type: PoolEventType.taskStart,
       taskID: task.id,
-      workerID
-    })
+      workerID,
+    });
 
     try {
-      const returnValue = await task.run(await worker.init)
+      const returnValue = await task.run(await worker.init);
 
-      this.debug(`Task #${task.id} completed successfully`)
+      this.debug(`Task #${task.id} completed successfully`);
       this.eventSubject.next({
         type: PoolEventType.taskCompleted,
         returnValue,
         taskID: task.id,
-        workerID
-      })
-    } catch (error) {
-      this.debug(`Task #${task.id} failed`)
+        workerID,
+      });
+    } catch (error: unknown) {
+      this.debug(`Task #${task.id} failed`);
       this.eventSubject.next({
         type: PoolEventType.taskFailed,
         taskID: task.id,
-        error,
-        workerID
-      })
+        error: error as Error,
+        workerID,
+      });
     }
   }
 
   private async run(worker: WorkerDescriptor<ThreadType>, task: QueuedTask<ThreadType, any>) {
     const runPromise = (async () => {
       const removeTaskFromWorkersRunningTasks = () => {
-        worker.runningTasks = worker.runningTasks.filter(someRunPromise => someRunPromise !== runPromise)
-      }
+        worker.runningTasks = worker.runningTasks.filter((someRunPromise) => someRunPromise !== runPromise);
+      };
 
       // Defer task execution by one tick to give handlers time to subscribe
-      await delay(0)
+      await delay(0);
 
       try {
-        await this.runPoolTask(worker, task)
+        await this.runPoolTask(worker, task);
       } finally {
-        removeTaskFromWorkersRunningTasks()
+        removeTaskFromWorkersRunningTasks();
 
         if (!this.isClosing) {
-          this.scheduleWork()
+          this.scheduleWork();
         }
       }
-    })()
+    })();
 
-    worker.runningTasks.push(runPromise)
+    worker.runningTasks.push(runPromise);
   }
 
-
   private scheduleWork() {
-    this.debug(`Attempt de-queueing a task in order to run it...`)
+    this.debug(`Attempt de-queueing a task in order to run it...`);
 
-    const availableWorker = this.findIdlingWorker()
-    if (!availableWorker) return
+    const availableWorker = this.findIdlingWorker();
+    if (!availableWorker) return;
 
-    const nextTask = this.taskQueue.shift()
+    const nextTask = this.taskQueue.shift();
     if (!nextTask) {
-      this.debug(`Task queue is empty`)
-      this.eventSubject.next({ type: PoolEventType.taskQueueDrained })
-      return
+      this.debug(`Task queue is empty`);
+      this.eventSubject.next({ type: PoolEventType.taskQueueDrained });
+      return;
     }
 
-    this.run(availableWorker, nextTask)
+    this.run(availableWorker, nextTask);
   }
 
   private taskCompletion(taskID: number) {
     return new Promise<any>((resolve, reject) => {
-      const eventSubscription = this.events().subscribe(event => {
+      const eventSubscription = this.events().subscribe((event) => {
         if (event.type === PoolEventType.taskCompleted && event.taskID === taskID) {
-          eventSubscription.unsubscribe()
-          resolve(event.returnValue)
+          eventSubscription.unsubscribe();
+          resolve(event.returnValue);
         } else if (event.type === PoolEventType.taskFailed && event.taskID === taskID) {
-          eventSubscription.unsubscribe()
-          reject(event.error)
+          eventSubscription.unsubscribe();
+          reject(event.error);
         } else if (event.type === PoolEventType.terminated) {
-          eventSubscription.unsubscribe()
-          reject(Error("Pool has been terminated before task was run."))
+          eventSubscription.unsubscribe();
+          reject(Error("Pool has been terminated before task was run."));
         }
-      })
-    })
+      });
+    });
   }
 
   public async settled(allowResolvingImmediately: boolean = false): Promise<Error[]> {
-    const getCurrentlyRunningTasks = () => flatMap(this.workers, worker => worker.runningTasks)
+    const getCurrentlyRunningTasks = () => flatMap(this.workers, (worker) => worker.runningTasks);
 
-    const taskFailures: Error[] = []
+    const taskFailures: Error[] = [];
 
-    const failureSubscription = this.eventObservable.subscribe(event => {
+    const failureSubscription = this.eventObservable.subscribe((event) => {
       if (event.type === PoolEventType.taskFailed) {
-        taskFailures.push(event.error)
+        taskFailures.push(event.error);
       }
-    })
+    });
 
     if (this.initErrors.length > 0) {
-      return Promise.reject(this.initErrors[0])
+      return Promise.reject(this.initErrors[0]);
     }
     if (allowResolvingImmediately && this.taskQueue.length === 0) {
-      await allSettled(getCurrentlyRunningTasks())
-      return taskFailures
+      await Promise.allSettled(getCurrentlyRunningTasks());
+      return taskFailures;
     }
 
     await new Promise<void>((resolve, reject) => {
       const subscription = this.eventObservable.subscribe({
         next(event) {
           if (event.type === PoolEventType.taskQueueDrained) {
-            subscription.unsubscribe()
-            resolve(void 0)
+            subscription.unsubscribe();
+            resolve(void 0);
           }
         },
-        error: reject     // make a pool-wide error reject the completed() result promise
-      })
-    })
+        error: reject, // make a pool-wide error reject the completed() result promise
+      });
+    });
 
-    await allSettled(getCurrentlyRunningTasks())
-    failureSubscription.unsubscribe()
+    await Promise.allSettled(getCurrentlyRunningTasks());
+    failureSubscription.unsubscribe();
 
-    return taskFailures
+    return taskFailures;
   }
 
   public async completed(allowResolvingImmediately: boolean = false) {
-    const settlementPromise = this.settled(allowResolvingImmediately)
+    const settlementPromise = this.settled(allowResolvingImmediately);
 
     const earlyExitPromise = new Promise<Error[]>((resolve, reject) => {
       const subscription = this.eventObservable.subscribe({
         next(event) {
           if (event.type === PoolEventType.taskQueueDrained) {
-            subscription.unsubscribe()
-            resolve(settlementPromise)
+            subscription.unsubscribe();
+            resolve(settlementPromise);
           } else if (event.type === PoolEventType.taskFailed) {
-            subscription.unsubscribe()
-            reject(event.error)
+            subscription.unsubscribe();
+            reject(event.error);
           }
         },
-        error: reject     // make a pool-wide error reject the completed() result promise
-      })
-    })
+        error: reject, // make a pool-wide error reject the completed() result promise
+      });
+    });
 
-    const errors = await Promise.race([
-      settlementPromise,
-      earlyExitPromise
-    ])
+    const errors = await Promise.race([settlementPromise, earlyExitPromise]);
 
     if (errors.length > 0) {
-      throw errors[0]
+      throw errors[0];
     }
   }
 
   public events() {
-    return this.eventObservable
+    return this.eventObservable;
   }
 
   public queue(taskFunction: TaskRunFunction<ThreadType, any>) {
-    const { maxQueuedJobs = Infinity } = this.options
+    const { maxQueuedJobs = Infinity } = this.options;
 
     if (this.isClosing) {
-      throw Error(`Cannot schedule pool tasks after terminate() has been called.`)
+      throw Error(`Cannot schedule pool tasks after terminate() has been called.`);
     }
     if (this.initErrors.length > 0) {
-      throw this.initErrors[0]
+      throw this.initErrors[0];
     }
 
-    const taskID = this.nextTaskID++
-    const taskCompletion = this.taskCompletion(taskID)
+    const taskID = this.nextTaskID++;
+    const taskCompletion = this.taskCompletion(taskID);
 
     taskCompletion.catch((error) => {
       // Prevent unhandled rejections here as we assume the user will use
       // `pool.completed()`, `pool.settled()` or `task.catch()` to handle errors
-      this.debug(`Task #${taskID} errored:`, error)
-    })
+      this.debug(`Task #${taskID} errored:`, error);
+    });
 
     const task: QueuedTask<ThreadType, any> = {
       id: taskID,
       run: taskFunction,
       cancel: () => {
-        if (this.taskQueue.indexOf(task) === -1) return
-        this.taskQueue = this.taskQueue.filter(someTask => someTask !== task)
+        if (this.taskQueue.indexOf(task) === -1) return;
+        this.taskQueue = this.taskQueue.filter((someTask) => someTask !== task);
         this.eventSubject.next({
           type: PoolEventType.taskCanceled,
-          taskID: task.id
-        })
+          taskID: task.id,
+        });
       },
-      then: taskCompletion.then.bind(taskCompletion)
-    }
+      then: taskCompletion.then.bind(taskCompletion),
+    };
 
     if (this.taskQueue.length >= maxQueuedJobs) {
       throw Error(
         "Maximum number of pool tasks queued. Refusing to queue another one.\n" +
-        "This usually happens for one of two reasons: We are either at peak " +
-        "workload right now or some tasks just won't finish, thus blocking the pool."
-      )
+          "This usually happens for one of two reasons: We are either at peak " +
+          "workload right now or some tasks just won't finish, thus blocking the pool.",
+      );
     }
 
-    this.debug(`Queueing task #${task.id}...`)
-    this.taskQueue.push(task)
+    this.debug(`Queueing task #${task.id}...`);
+    this.taskQueue.push(task);
 
     this.eventSubject.next({
       type: PoolEventType.taskQueued,
-      taskID: task.id
-    })
+      taskID: task.id,
+    });
 
-    this.scheduleWork()
-    return task
+    this.scheduleWork();
+    return task;
   }
 
   public async terminate(force?: boolean) {
-    this.isClosing = true
+    this.isClosing = true;
     if (!force) {
-      await this.completed(true)
+      await this.completed(true);
     }
     this.eventSubject.next({
       type: PoolEventType.terminated,
-      remainingQueue: [...this.taskQueue]
-    })
-    this.eventSubject.complete()
-    await Promise.all(
-      this.workers.map(async worker => Thread.terminate(await worker.init))
-    )
+      remainingQueue: [...this.taskQueue],
+    });
+    this.eventSubject.complete();
+    await Promise.all(this.workers.map(async (worker) => Thread.terminate(await worker.init)));
   }
 }
 
@@ -390,16 +372,16 @@ class WorkerPool<ThreadType extends Thread> implements Pool<ThreadType> {
  */
 function PoolConstructor<ThreadType extends Thread>(
   spawnWorker: () => Promise<ThreadType>,
-  optionsOrSize?: number | PoolOptions
+  optionsOrSize?: number | PoolOptions,
 ) {
   // The function exists only so we don't need to use `new` to create a pool (we still can, though).
   // If the Pool is a class or not is an implementation detail that should not concern the user.
-  return new WorkerPool(spawnWorker, optionsOrSize)
+  return new WorkerPool(spawnWorker, optionsOrSize);
 }
 
-(PoolConstructor as any).EventType = PoolEventType
+(PoolConstructor as any).EventType = PoolEventType;
 
 /**
  * Thread pool constructor. Creates a new pool and spawns its worker threads.
  */
-export const Pool = PoolConstructor as typeof PoolConstructor & { EventType: typeof PoolEventType }
+export const Pool = PoolConstructor as typeof PoolConstructor & { EventType: typeof PoolEventType };

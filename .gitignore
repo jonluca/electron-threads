@@ -6,7 +6,7 @@ docs/vendor
 dist/*
 dist-*/*
 node_modules/
-test-tooling/rollup/dist/
+test-tooling/esbuild/dist/
 test-tooling/webpack/dist/
 test/workers/*.js
 .DS_Store

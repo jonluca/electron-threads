@@ -1,19 +1,19 @@
-import { $transferable } from "./symbols"
+import { $transferable } from "./symbols";
 
 export interface TransferDescriptor<T = any> {
-  [$transferable]: true
-  send: T
-  transferables: Transferable[]
+  [$transferable]: true;
+  send: T;
+  transferables: Transferable[];
 }
 
 function isTransferable(thing: any): thing is Transferable {
-  if (!thing || typeof thing !== "object") return false
+  if (!thing || typeof thing !== "object") return false;
   // Don't check too thoroughly, since the list of transferable things in JS might grow over time
-  return true
+  return true;
 }
 
 export function isTransferDescriptor(thing: any): thing is TransferDescriptor {
-  return thing && typeof thing === "object" && thing[$transferable]
+  return thing && typeof thing === "object" && thing[$transferable];
 }
 
 /**
@@ -32,7 +32,7 @@ export function isTransferDescriptor(thing: any): thing is TransferDescriptor {
  * @param transferable Array buffer, message port or similar.
  * @see <https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast>
  */
-export function Transfer(transferable: Transferable): TransferDescriptor
+export function Transfer(transferable: Transferable): TransferDescriptor;
 
 /**
  * Mark transferable objects within an arbitrary object or array as
@@ -51,17 +51,17 @@ export function Transfer(transferable: Transferable): TransferDescriptor
  * @param transferable Array buffer, message port or similar.
  * @see <https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast>
  */
-export function Transfer<T>(payload: T, transferables: Transferable[]): TransferDescriptor
+export function Transfer<T>(payload: T, transferables: Transferable[]): TransferDescriptor;
 
 export function Transfer<T>(payload: T, transferables?: Transferable[]): TransferDescriptor {
   if (!transferables) {
-    if (!isTransferable(payload)) throw Error()
-    transferables = [payload]
+    if (!isTransferable(payload)) throw Error();
+    transferables = [payload];
   }
 
   return {
     [$transferable]: true,
     send: payload,
-    transferables
-  }
+    transferables,
+  };
 }
