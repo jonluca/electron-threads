@@ -41,11 +41,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andywer/threads.js.git"
+    "url": "git+https://github.com/jonluca/threads.js.git"
   },
   "author": "Andy Wermke (https://github.com/andywer)",
   "bugs": {
-    "url": "https://github.com/andywer/threads.js/issues"
+    "url": "https://github.com/jonluca/threads.js/issues"
   },
   "funding": "https://github.com/andywer/threads.js?sponsor=1",
   "homepage": "https://threads.js.org",
