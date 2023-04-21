@@ -1,5 +1,5 @@
 {
-  "name": "electron-threads",
+  "name": "electron-worker-threads",
   "version": "0.0.0-development",
   "description": "Web workers & worker threads as simple as a function call",
   "license": "MIT",
