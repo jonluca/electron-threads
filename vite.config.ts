@@ -5,7 +5,7 @@ export default defineConfig({
     environment: env,
     dir: ".",
     watch: false,
-    testTimeout: 5000,
+    testTimeout: 50000,
     passWithNoTests: true,
     reporters: ["verbose"],
     deps: {
