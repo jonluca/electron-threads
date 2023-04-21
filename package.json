@@ -12,7 +12,7 @@
     "bundle": "esbuild dist/worker/bundle-entry.js --outfile=bundle/worker.js --bundle --packages=external --target=chrome109",
     "test": "npm run test:library && npm run test:puppeteer:basic",
     "test:library": "cross-env TS_NODE_FILES=true vitest",
-    "test:puppeteer:basic": "BROWSER=true vitest",
+    "test:puppeteer:basic": "cross-env BROWSER=true vitest",
     "prepare": "npm run build"
   },
   "exports": {
